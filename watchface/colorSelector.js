@@ -260,34 +260,20 @@ export function getColorFromType(typeId) {
   return entry ? entry.color : null
 }
 
-function _makeOptionalArray(entries) {
-  return ALL_COLORS.map(c => ({ type: c.type, preview: entries(c.id), title_en: c.name, title_sc: c.name, title_tc: c.name }))
+// Preview languages with their own assets under bg/color/<lang>/ (see tools/gen_color_previews.py).
+// getLanguage() codes: 10=it, 3=es, 4=ru, 6=fr; anything else (Turkish, unmapped…) falls back to English.
+const PREVIEW_LANG = { 10: 'it', 3: 'es', 4: 'ru', 6: 'fr' }
+
+// Builds the optional_types list of one color zone ('hour' | 'minute' | 'date') for the device language,
+// e.g. it → "undici" / "e venti" / "lunedì 01 gennaio".
+// Built on demand rather than exported as ready-made arrays: all 15 lists (5 languages × 3 zones,
+// 115 entries each = 1725 objects) would otherwise stay in the JS heap for the watch face's whole life,
+// while only the 3 of the device language are ever used, once, in createWidget.
+export function colorOptionalArray(zone, deviceLang) {
+  const lang = PREVIEW_LANG[deviceLang] || 'en'
+  const dir = `bg/color/${lang}/${zone}_prev_${lang}_`
+  return ALL_COLORS.map(c => ({ type: c.type, preview: `${dir}${c.id}.png`, title_en: c.name, title_sc: c.name, title_tc: c.name }))
 }
-
-// Italiano — preview shows "undici" / "e venti" / "lunedì 01 gennaio"
-export const hourColorOptionalArray   = _makeOptionalArray(id => `bg/color/it/hour_prev_it_${id}.png`)
-export const minuteColorOptionalArray = _makeOptionalArray(id => `bg/color/it/minute_prev_it_${id}.png`)
-export const dateColorOptionalArray   = _makeOptionalArray(id => `bg/color/it/date_prev_it_${id}.png`)
-
-// English — preview shows "eleven" / "and twenty" / "monday 01 january"
-export const hourColorOptionalArrayEn   = _makeOptionalArray(id => `bg/color/en/hour_prev_en_${id}.png`)
-export const minuteColorOptionalArrayEn = _makeOptionalArray(id => `bg/color/en/minute_prev_en_${id}.png`)
-export const dateColorOptionalArrayEn   = _makeOptionalArray(id => `bg/color/en/date_prev_en_${id}.png`)
-
-// Spanish — preview shows "once" / "y veinte" / "lunes, 01 de enero"
-export const hourColorOptionalArrayEs   = _makeOptionalArray(id => `bg/color/es/hour_prev_es_${id}.png`)
-export const minuteColorOptionalArrayEs = _makeOptionalArray(id => `bg/color/es/minute_prev_es_${id}.png`)
-export const dateColorOptionalArrayEs   = _makeOptionalArray(id => `bg/color/es/date_prev_es_${id}.png`)
-
-// Russian — preview shows "одиннадцать" / "и двадцать" / "понедельник, 1 января"
-export const hourColorOptionalArrayRu   = _makeOptionalArray(id => `bg/color/ru/hour_prev_ru_${id}.png`)
-export const minuteColorOptionalArrayRu = _makeOptionalArray(id => `bg/color/ru/minute_prev_ru_${id}.png`)
-export const dateColorOptionalArrayRu   = _makeOptionalArray(id => `bg/color/ru/date_prev_ru_${id}.png`)
-
-// French — preview shows "onze" / "et vingt" / "lundi 1 janvier"
-export const hourColorOptionalArrayFr   = _makeOptionalArray(id => `bg/color/fr/hour_prev_fr_${id}.png`)
-export const minuteColorOptionalArrayFr = _makeOptionalArray(id => `bg/color/fr/minute_prev_fr_${id}.png`)
-export const dateColorOptionalArrayFr   = _makeOptionalArray(id => `bg/color/fr/date_prev_fr_${id}.png`)
 
 // edit_id values for the 3 color selector groups (must not clash with 101/110/111/112)
 export const COLOR_EDIT_ID = {

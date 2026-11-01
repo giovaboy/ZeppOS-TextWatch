@@ -1,5 +1,5 @@
 import { createWidget, deleteWidget, widget, align, text_style, prop, anim_status, show_level, event, edit_type } from '@zos/ui'
-import { getScene, SCENE_AOD } from '@zos/app'
+import { getScene, SCENE_AOD, getPerformance } from '@zos/app'
 import { px, log } from '@zos/utils'
 import { Time } from '@zos/sensor'
 import { launchApp, SYSTEM_APP_CALENDAR } from '@zos/router'
@@ -7,14 +7,7 @@ import NumberToText from './numberToText.js'
 import { backgrounds } from './backgrounds.js'
 import EditTypesUtil, { widgetOptionalArray, BLANK_TYPE, setWidgetTextColor } from './editTypesUtil.js'
 import { getLanguage } from '@zos/settings'
-import {
-  hourColorOptionalArray, minuteColorOptionalArray, dateColorOptionalArray,
-  hourColorOptionalArrayEn, minuteColorOptionalArrayEn, dateColorOptionalArrayEn,
-  hourColorOptionalArrayEs, minuteColorOptionalArrayEs, dateColorOptionalArrayEs,
-  hourColorOptionalArrayRu, minuteColorOptionalArrayRu, dateColorOptionalArrayRu,
-  hourColorOptionalArrayFr, minuteColorOptionalArrayFr, dateColorOptionalArrayFr,
-  getColorFromType, COLOR_EDIT_ID, COLOR,
-} from './colorSelector.js'
+import { colorOptionalArray, getColorFromType, COLOR_EDIT_ID, COLOR } from './colorSelector.js'
 
 try {
   (() => {
@@ -35,6 +28,31 @@ const DEBUG = false;
 const logger = log.getLogger("textwatch-italiano");
 
 const timeSensor = new Time()
+
+// DEBUG: memoria dell'app e del sistema, da getPerformance (API 4.0; il progetto punta a 3.0, quindi
+// su firmware più vecchi la funzione può mancare). Una watch face non ha side service né Logs box:
+// la riga va a schermo (secondTextWidget) e nel log del simulatore.
+const APP_ID = 1043121
+function _memLine() {
+  try {
+    if (typeof getPerformance !== 'function') return 'mem n/a (API < 4.0)'
+    const m = getPerformance('memory').memory
+    const apps = m.app || []
+    const a = apps.find(x => x.appid === APP_ID) || apps[0]
+    const kb = (b) => Math.round(b / 1024)
+    const app = a ? `app ${kb(a.used)}/${kb(a.peak)} KB` : 'app ?'
+    return `${app} · sys ${kb(m.system.used)}/${kb(m.system.total)} KB`
+  } catch (e) {
+    return e === null ? 'mem: out of memory' : 'mem err: ' + e
+  }
+}
+function _memModules() {
+  try {
+    const m = getPerformance('memory').memory
+    const a = (m.app || []).find(x => x.appid === APP_ID) || (m.app || [])[0]
+    return (a && a.modules || []).map(mod => `${mod.file} ${Math.round(mod.used / 1024)}/${Math.round(mod.peak / 1024)} KB`).join(' | ')
+  } catch (_) { return '' }
+}
 
 // Barlow non copre il cirillico: per il russo (lang 4) si usa Inter (subset latino+cirillico)
 const _isRu = (() => { try { return getLanguage() === 4 } catch (_) { return false } })()
@@ -193,29 +211,17 @@ WatchFace({
       return { grp }
     }
 
-    // Scegli array preview in base alla lingua del dispositivo.
-    // Esistono asset IT, EN, ES, RU e FR: italiano, spagnolo, russo e francese sono
-    // espliciti, ogni altra lingua (turco, non mappate, ecc.) ricade sull'inglese.
+    // Liste preview nella lingua del dispositivo (it/en/es/ru/fr, le altre ricadono sull'inglese).
+    // Costruite qui e passate direttamente a createWidget: nessun riferimento resta dopo il build,
+    // così il GC le libera (prima tutte le 15 liste restavano in memoria come export del modulo).
     const _deviceLang = (() => { try { return getLanguage() } catch(_) { return 2 } })()
-    const _previewLangArrays = _deviceLang === 10
-      ? { hour: hourColorOptionalArray,   minute: minuteColorOptionalArray,   date: dateColorOptionalArray }
-      : _deviceLang === 3
-      ? { hour: hourColorOptionalArrayEs, minute: minuteColorOptionalArrayEs, date: dateColorOptionalArrayEs }
-      : _deviceLang === 4
-      ? { hour: hourColorOptionalArrayRu, minute: minuteColorOptionalArrayRu, date: dateColorOptionalArrayRu }
-      : _deviceLang === 6
-      ? { hour: hourColorOptionalArrayFr, minute: minuteColorOptionalArrayFr, date: dateColorOptionalArrayFr }
-      : { hour: hourColorOptionalArrayEn, minute: minuteColorOptionalArrayEn, date: dateColorOptionalArrayEn }
-    const _hourArr   = _previewLangArrays.hour
-    const _minuteArr = _previewLangArrays.minute
-    const _dateArr   = _previewLangArrays.date
 
     // Ore: rettangolo 400×80, centrato orizzontalmente, sovrapposto al testo ore (y=110, h=80)
-    const csHour   = _makeColorGroup(COLOR_EDIT_ID.HOUR,   px(40),  px(110), px(400), px(80),  _hourArr,   'mask/select_rect.png')
+    const csHour   = _makeColorGroup(COLOR_EDIT_ID.HOUR,   px(40),  px(110), px(400), px(80),  colorOptionalArray('hour',   _deviceLang), 'mask/select_rect.png')
     // Minuti: rettangolo 400×80, centrato, sovrapposto al testo minuti
-    const csMinute = _makeColorGroup(COLOR_EDIT_ID.MINUTE, px(40),  MaY,     px(400), px(80),  _minuteArr, 'mask/select_rect.png', true)
+    const csMinute = _makeColorGroup(COLOR_EDIT_ID.MINUTE, px(40),  MaY,     px(400), px(80),  colorOptionalArray('minute', _deviceLang), 'mask/select_rect.png', true)
     // Data: rettangolo 280×35, centrato (x=100), sovrapposto al testo data
-    const csDate   = _makeColorGroup(COLOR_EDIT_ID.DATE,   px(100), dateY,   px(280), dateH,   _dateArr,   'mask/select_date.png', true)
+    const csDate   = _makeColorGroup(COLOR_EDIT_ID.DATE,   px(100), dateY,   px(280), dateH,   colorOptionalArray('date',   _deviceLang), 'mask/select_date.png', true)
 
     colorGroupHour   = csHour.grp
     colorGroupMinute = csMinute.grp
@@ -328,11 +334,11 @@ WatchFace({
 
     if ( DEBUG ) {
       secondTextWidget = createWidget(widget.TEXT, {
-        x: px(0),y: px(2),w: px(480), h: px(10), text_size: px(10),
+        x: px(60), y: px(100), w: px(360), h: px(16), text_size: px(14),
         align_h: align.CENTER_H, align_v: align.CENTER_V,
         color: 0xffffff,
         show_level: show_level.ONLY_NORMAL,
-        text: String(timeSensor.getSeconds())
+        text: `${timeSensor.getSeconds()}s · ${_memLine()}`
       });
     };
 
@@ -498,7 +504,7 @@ WatchFace({
           minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
         } else {
           _refreshColors()
-          if ( DEBUG ) { secondTextWidget.setProperty(prop.MORE, {text : timeSensor.getSeconds() }) }
+          if ( DEBUG ) { secondTextWidget.setProperty(prop.MORE, {text : `${timeSensor.getSeconds()}s · ${_memLine()}` }) }
           hourTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getHours(timeSensor.getHours())}`, x: HaX, color: hourColor });
           minuteTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}`, x: MaX, color: minuteColor });
           hourTextWidgetB.setProperty(prop.MORE, {text : '', x: HbX});
@@ -514,8 +520,10 @@ WatchFace({
     });
 
     if ( DEBUG ) {
+      logger.log('[mem] after build: ' + _memLine());
+      logger.log('[mem] modules: ' + _memModules());
       setInterval(() => {
-        secondTextWidget.setProperty(prop.MORE, {text : timeSensor.getSeconds() });
+        secondTextWidget.setProperty(prop.MORE, {text : `${timeSensor.getSeconds()}s · ${_memLine()}` });
       }, 1000);
     };
 
