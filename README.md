@@ -8,13 +8,15 @@ Born as an Italian-only text watch, it now speaks **Italian, English, Spanish, F
 
 | Language | Example (14:57) |
 |----------|-----------------|
-| 🇮🇹 Italiano | `due` / `e cinquantasette` |
+| 🇮🇹 Italiano | `quattordici` / `e cinquantasette` |
 | 🇬🇧 English  | `two` / `fifty-seven` |
 | 🇪🇸 Español  | `dos` / `y cincuenta y siete` |
 | 🇫🇷 Français | `deux` / `et cinquante-sept` |
 | 🇷🇺 Русский  | `два` / `и пятьдесят семь` |
 
-Each language gets proper idiomatic forms, not literal translations: `mezzogiorno`/`noon`/`mediodía`/`midi`/`полдень`, quarter hours (`e un quarto`, `y media`, `et quart`, `и четверть`…), Italian phonetic elisions (`ventotto`, `trentuno`), French's non-hyphenated "et un" (`vingt et un`, not `vingt-un`), Russian genitive months in dates.
+Each language gets proper idiomatic forms, not literal translations: `mezzogiorno`/`noon`/`mediodía`/`midi`/`полдень`, quarter hours (`e un quarto`, `y media`, `et quart`, `и четверть`…), Italian phonetic elisions (`ventotto`, `trentuno`) and accented compounds (`trentatré`), French's non-hyphenated "et un" (`vingt et un`, not `vingt-un`), Russian genitive months in dates.
+
+Italian hours use 24-hour words from 14 to 23 (`quattordici`, `ventitré`), with `una` for both 1 and 13 and `mezzogiorno` / `mezzanotte` for 12 and 0. The other languages use 12-hour words.
 
 Russian text renders in [Inter](https://github.com/rsms/inter) instead of the watch's default Barlow font, which has no Cyrillic glyphs — bundled as a Latin+Cyrillic subset to keep the package small.
 

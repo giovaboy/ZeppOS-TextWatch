@@ -19,7 +19,7 @@ const IT_MAP = {
   9:  'nove',   10: 'dieci',    11: 'undici',     12: 'dodici',
   13: 'tredici',14: 'quattordici', 15: 'quindici', 16: 'sedici',
   17: 'diciassette', 18: 'diciotto', 19: 'diciannove',
-  20: 'venti',  21: 'ventuno',  22: 'ventidue',   23: 'ventitre',
+  20: 'venti',  21: 'ventuno',  22: 'ventidue',   23: 'ventitré',
   24: 'ventiquattro', 25: 'venticinque',
   28: 'ventotto',
   30: 'trenta', 31: 'trentuno', 38: 'trentotto',
@@ -36,11 +36,13 @@ const IT_MONTHS = {
   5: 'maggio',   6: 'giugno',   7: 'luglio',   8: 'agosto',
   9: 'settembre',10: 'ottobre', 11: 'novembre',12: 'dicembre',
 }
-// Elisioni fonetiche: x1 "trentuno", x8 "ventotto", tutti < 26 diretti
+// Elisioni fonetiche: x1 "trentuno", x8 "ventotto", tutti < 26 diretti.
+// I composti in -tre vogliono l'accento: "trentatré", "cinquantatré" ("tre" da solo no).
 function _itNumToWords(n) {
   const mod = n % 10
   if (n < 26 || mod === 1 || mod === 8) return IT_MAP[n]
   const decine = IT_MAP[Math.floor(n / 10) * 10]
+  if (mod === 3) return decine + 'tré'
   return mod ? decine + IT_MAP[mod] : decine
 }
 
