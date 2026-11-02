@@ -190,17 +190,88 @@ let colorGroupDate   = null;
 
 let editBgWidget = null;
 
+// ── Widget AOD (usati dal build AOD e, come riserva, da quello normale) ─────────
+function _createAODBackground() {
+  createWidget(widget.FILL_RECT, {
+    x: px(0), y: px(0),
+    w: px(480), h: px(480),
+    color: aodBgColor, show_level: show_level.ONAL_AOD
+  });
+}
+function _createHourAOD() {
+  hourAODWidget = createWidget(widget.TEXT, { font: hourAODFont, text: dummyCharsetHour,
+    x: HaX, y: HaY, w: HaW, h: HaH, text_size: hourTextSize, color: hourAODColor, show_level: show_level.ONAL_AOD, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS })
+  hourAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getHours(timeSensor.getHours())}` });
+}
+function _createMinuteAOD() {
+  minuteAODWidget = createWidget(widget.TEXT, { font: minuteAODFont, text: dummyCharsetMinute,
+    show_level: show_level.ONAL_AOD, x: MaX, y: MaY, w: MaW, h: MaH, color: minuteAODColor, text_size: minuteTextSize, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS });
+  minuteAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
+}
+function _updateAOD() {
+  hourAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getHours(timeSensor.getHours())}` });
+  minuteAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
+}
+
+// DEBUG: due righe sopra le ore (scena/istanza e memoria), una per modalità, nello stesso posto.
+const _dbgOpts = () => ({
+  x: px(80), y: px(64), w: px(320), h: px(40), text_size: px(13),
+  align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.WRAP,
+  color: 0xffffff,
+})
+
+// deleteWidget solo sui widget creati: l'istanza AOD non crea quelli della modalità normale
+function _del(w) { if (w) deleteWidget(w) }
+
 
 WatchFace({
+
+  // In AOD il sistema avvia un'istanza separata della watch face, con un suo build (verificato sul
+  // Cheetah 2 Ultra con la prova DEBUG, 02/11/2026: load e build propri, scena aod; l'istanza normale
+  // intanto resta viva e non viene ricreata al risveglio). Costava ~200 KB a ogni ingresso in AOD
+  // costruire anche sfondo modificabile, selettori colore, gruppi e widget degli slot, che in AOD non
+  // si vedono: qui si crea solo ciò che l'AOD mostra.
+  aodBuild() {
+    _createAODBackground();
+    _createHourAOD();
+    _createMinuteAOD();
+
+    if ( DEBUG ) {
+      aodDebugWidget = createWidget(widget.TEXT, { ..._dbgOpts(), show_level: show_level.ONAL_AOD, text: _dbgText('AOD') });
+      logger.log('[aod] build: ' + _probeLine());
+      logger.log('[mem] after AOD build: ' + _memLine());
+    }
+
+    createWidget(widget.WIDGET_DELEGATE, {
+      resume_call: function () {
+        if ( DEBUG ) { logger.log('resume_call (aod): ' + _probeLine()); _dbgUpdate() }
+        _updateAOD();
+      },
+    });
+
+    timeSensor.onPerMinute(() => {
+      if ( DEBUG ) _dbgUpdate()
+      _updateAOD();
+    });
+  },
+
   //https://github.com/zepp-health/zeppos-samples/blob/main/application/3.0/3.0-feature/app-service/time_service.js
 
   textWatchBuild() {
 
-    createWidget(widget.FILL_RECT, {
-      x: px(0), y: px(0),
-      w: px(480), h: px(480),
-      color: aodBgColor, show_level: show_level.ONAL_AOD
-    });
+    const screenType = getScene();
+    _dbgBuilds++
+    _dbgBuildAt = _hms()
+    _dbgBuildScene = _sceneName(screenType)
+
+    if (screenType == SCENE_AOD) {
+      this.aodBuild();
+      return;
+    }
+
+    // Da qui la modalità normale (e l'editor). I widget AOD restano anche qui come riserva, nel caso
+    // un firmware mostri l'AOD con questa stessa istanza: costano poco (un rettangolo e due testi).
+    _createAODBackground();
 
     editBgWidget = createWidget(widget.WATCHFACE_EDIT_BG, {
       edit_id: 101,
@@ -266,20 +337,13 @@ WatchFace({
     _refreshColors()
     // ─────────────────────────────────────────────────────────────────────────
 
-    let screenType = getScene();
-    _dbgBuilds++
-    _dbgBuildAt = _hms()
-    _dbgBuildScene = _sceneName(screenType)
-
     /* HOURS */
     hourTextWidgetA = createWidget(widget.TEXT, { font: hourNormalFont, text: dummyCharsetHour,
       x: HaX, y: HaY, w: HaW, h: HaH, text_size: hourTextSize, color: hourColor, show_level: show_level.ONLY_NORMAL, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS })
     hourTextWidgetB = createWidget(widget.TEXT, { font: hourNormalFont, text: dummyCharsetHour,
       x: HbX, y: HbY, w: HbW, h: HbH, text_size: hourTextSize, color: hourColor, show_level: show_level.ONLY_NORMAL, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS })
-    hourAODWidget = createWidget(widget.TEXT, { font: hourAODFont, text: dummyCharsetHour,
-      x: HaX, y: HaY, w: HaW, h: HaH, text_size: hourTextSize, color: hourAODColor, show_level: show_level.ONAL_AOD, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS })
+    _createHourAOD();
 
-    hourAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getHours(timeSensor.getHours())}` });
     hourTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getHours(timeSensor.getHours())}` });
     hourTextWidgetB.setProperty(prop.MORE, { text: '' });
 
@@ -312,10 +376,8 @@ WatchFace({
       show_level: show_level.ONLY_NORMAL, x: MaX, y: MaY, w: MaW, h: MaH, color: minuteColor, text_size: minuteTextSize, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS });
     minuteTextWidgetB = createWidget(widget.TEXT, { font: minuteNormalFont, text: dummyCharsetMinute,
       show_level: show_level.ONLY_NORMAL, x: MbX, y: MbY, w: MbW, h: MbH, color: minuteColor, text_size: minuteTextSize, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS });
-    minuteAODWidget = createWidget(widget.TEXT, { font: minuteAODFont, text: dummyCharsetMinute,
-      show_level: show_level.ONAL_AOD, x: MaX, y: MaY, w: MaW, h: MaH, color: minuteAODColor, text_size: minuteTextSize, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS });
+    _createMinuteAOD();
 
-    minuteAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
     minuteTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
     minuteTextWidgetB.setProperty(prop.MORE, { text: '' });
 
@@ -361,14 +423,8 @@ WatchFace({
     });
 
     if ( DEBUG ) {
-      // Due righe sopra le ore: prova AOD (istanza/scena) e memoria. Una per modalità, nello stesso posto.
-      const _dbgOpts = {
-        x: px(80), y: px(64), w: px(320), h: px(40), text_size: px(13),
-        align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.WRAP,
-        color: 0xffffff,
-      }
-      secondTextWidget = createWidget(widget.TEXT, { ..._dbgOpts, show_level: show_level.ONLY_NORMAL, text: _dbgText('N') });
-      aodDebugWidget   = createWidget(widget.TEXT, { ..._dbgOpts, show_level: show_level.ONAL_AOD,    text: _dbgText('AOD') });
+      secondTextWidget = createWidget(widget.TEXT, { ..._dbgOpts(), show_level: show_level.ONLY_NORMAL, text: _dbgText('N') });
+      aodDebugWidget   = createWidget(widget.TEXT, { ..._dbgOpts(), show_level: show_level.ONAL_AOD,    text: _dbgText('AOD') });
     };
 
     /* 1 - HEART EDITABLE GROUP */
@@ -620,24 +676,24 @@ WatchFace({
 
   onDestroy() {
     if ( DEBUG ) logger.log('onDestroy invoke');
-    deleteWidget(dateTextWidget);
-    deleteWidget(hourTextWidgetA);
-    deleteWidget(hourTextWidgetB);
-    deleteWidget(minuteTextWidgetA);
-    deleteWidget(minuteTextWidgetB);
+    _del(dateTextWidget);
+    _del(hourTextWidgetA);
+    _del(hourTextWidgetB);
+    _del(minuteTextWidgetA);
+    _del(minuteTextWidgetB);
 
-    deleteWidget(hourAODWidget);
-    deleteWidget(minuteAODWidget);
+    _del(hourAODWidget);
+    _del(minuteAODWidget);
 
-    deleteWidget(editGroup1);
-    deleteWidget(editGroup2);
-    deleteWidget(editGroup3);
-    deleteWidget(editGroup4);
-    deleteWidget(editGroup5);
+    _del(editGroup1);
+    _del(editGroup2);
+    _del(editGroup3);
+    _del(editGroup4);
+    _del(editGroup5);
 
-    deleteWidget(colorGroupHour);
-    deleteWidget(colorGroupMinute);
-    deleteWidget(colorGroupDate);
+    _del(colorGroupHour);
+    _del(colorGroupMinute);
+    _del(colorGroupDate);
 
     editBgWidget = null;
     dateTextWidget = null;
