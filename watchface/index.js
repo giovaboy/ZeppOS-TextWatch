@@ -24,7 +24,7 @@ try {
     *            |        |
     */
 
-const DEBUG = true;
+const DEBUG = false;
 const logger = log.getLogger("textwatch-italiano");
 
 const timeSensor = new Time()
