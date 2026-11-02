@@ -207,8 +207,8 @@ export default class EditTypesUtil {
         createWidget(widget.ARC_PROGRESS, {
           x: 0, y: 0, w: bgw, h: bgw,
           center_x: cx, center_y: cy,
-          radius: 35, start_angle: -139, end_angle: 139,
-          line_width: 8, color: def.color, type: def.dt,
+          radius: px(35), start_angle: -139, end_angle: 139,
+          line_width: px(8), color: def.color, type: def.dt,
           show_level: show_level.ONLY_NORMAL,
         })
         if (def.sysText) {
@@ -459,8 +459,8 @@ export default class EditTypesUtil {
       }
 
       case 'sun': {
-        const ARC_RADIUS = 35
-        const ARC_LINE_W = 8
+        const ARC_RADIUS = px(35)
+        const ARC_LINE_W = px(8)
         const DOT_OVER   = px(1)
         const dotArea    = px(92) + 2 * DOT_OVER
 
@@ -483,8 +483,8 @@ export default class EditTypesUtil {
         const dotWidget = createWidget(widget.IMG, {
           x: sx - DOT_OVER, y: sy - DOT_OVER,
           w: dotArea, h: dotArea,
-          pos_x: DOT_CX - 6,
-          pos_y: DOT_CY - ARC_RADIUS - 4,
+          pos_x: DOT_CX - px(6),
+          pos_y: DOT_CY - ARC_RADIUS - px(4),
           center_x: DOT_CX,
           center_y: DOT_CY,
           angle: 0, src: numPath + 'p.png',
