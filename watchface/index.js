@@ -1,5 +1,5 @@
 import { createWidget, deleteWidget, widget, align, text_style, prop, anim_status, show_level, event, edit_type } from '@zos/ui'
-import { getScene, SCENE_AOD, getPerformance } from '@zos/app'
+import { getScene, SCENE_AOD, SCENE_WATCHFACE, SCENE_SETTINGS, getPerformance } from '@zos/app'
 import { px, log } from '@zos/utils'
 import { Time } from '@zos/sensor'
 import { launchApp, SYSTEM_APP_CALENDAR } from '@zos/router'
@@ -24,7 +24,7 @@ try {
     *            |        |
     */
 
-const DEBUG = false;
+const DEBUG = true;
 const logger = log.getLogger("textwatch-italiano");
 
 const timeSensor = new Time()
@@ -52,6 +52,28 @@ function _memModules() {
     const a = (m.app || []).find(x => x.appid === APP_ID) || (m.app || [])[0]
     return (a && a.modules || []).map(mod => `${mod.file} ${Math.round(mod.used / 1024)}/${Math.round(mod.peak / 1024)} KB`).join(' | ')
   } catch (_) { return '' }
+}
+
+// DEBUG: prova AOD. Domanda: in AOD gira un'istanza JS separata della watch face (con un suo build),
+// o è la stessa istanza della modalità normale? Ogni istanza ha un suo "load" (ora di caricamento del
+// modulo) e conta i propri build; la scena è letta sia al build sia al momento dell'aggiornamento.
+//   istanza separata → la riga AOD dice "build aod · now aod" e un load diverso da quello della normale
+//   stessa istanza   → la riga AOD dice "build wf · now aod" e lo stesso load della normale
+const _hms = () => [timeSensor.getHours(), timeSensor.getMinutes(), timeSensor.getSeconds()].map(n => String(n).padStart(2, '0')).join(':')
+const _sceneName = (s) => s === SCENE_AOD ? 'aod' : s === SCENE_WATCHFACE ? 'wf' : s === SCENE_SETTINGS ? 'edit' : String(s)
+const _dbgLoadAt = _hms()
+let _dbgBuilds = 0
+let _dbgBuildAt = ''
+let _dbgBuildScene = ''
+function _probeLine() {
+  let now = '?'
+  try { now = _sceneName(getScene()) } catch (_) {}
+  return `load ${_dbgLoadAt} · build#${_dbgBuilds} ${_dbgBuildAt} ${_dbgBuildScene} · now ${now}`
+}
+const _dbgText = (tag) => `${tag} ${_probeLine()}\n${_memLine()} · upd ${_hms()}`
+function _dbgUpdate() {
+  if (secondTextWidget) secondTextWidget.setProperty(prop.MORE, { text: _dbgText('N') })
+  if (aodDebugWidget)   aodDebugWidget.setProperty(prop.MORE, { text: _dbgText('AOD') })
 }
 
 // Barlow non copre il cirillico: per il russo (lang 4) si usa Inter (subset latino+cirillico)
@@ -109,8 +131,8 @@ let dateColor;
 let hourColor;
 let minuteColor;
 
-const dummyCharsetMinute = _isRu ? ' авдеиклмнопрстцчшыья' : 'acdegimnopqrstuv';
-const dummyCharsetHour = _isRu ? 'авдеилмнопрстцчшыья' : 'acdegimnopqrstuvz';
+const dummyCharsetMinute = _isRu ? ' авдеиклмнопрстцчшыья' : 'acdegimnopqrstuvé';
+const dummyCharsetHour = _isRu ? 'авдеилмнопрстцчшыья' : 'acdegimnopqrstuvzé';
 const dummyCharsetDate = _isRu ? 'абвгдеиклмнопрстуфцчьюя,0123456789' : 'abcdefgilmnoprstuvzì0123456789';
 
 const hourNormalFont = _isRu ? 'fonts/Inter-Medium.ttf' : 'fonts/Barlow-Medium.ttf';
@@ -140,6 +162,7 @@ const anim_step_out = {
 }
 
 let secondTextWidget = null;
+let aodDebugWidget = null;
 
 let dateTextWidget = null;
 let hourTextWidgetA = null;
@@ -244,6 +267,9 @@ WatchFace({
     // ─────────────────────────────────────────────────────────────────────────
 
     let screenType = getScene();
+    _dbgBuilds++
+    _dbgBuildAt = _hms()
+    _dbgBuildScene = _sceneName(screenType)
 
     /* HOURS */
     hourTextWidgetA = createWidget(widget.TEXT, { font: hourNormalFont, text: dummyCharsetHour,
@@ -335,13 +361,14 @@ WatchFace({
     });
 
     if ( DEBUG ) {
-      secondTextWidget = createWidget(widget.TEXT, {
-        x: px(60), y: px(100), w: px(360), h: px(16), text_size: px(14),
-        align_h: align.CENTER_H, align_v: align.CENTER_V,
+      // Due righe sopra le ore: prova AOD (istanza/scena) e memoria. Una per modalità, nello stesso posto.
+      const _dbgOpts = {
+        x: px(80), y: px(64), w: px(320), h: px(40), text_size: px(13),
+        align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.WRAP,
         color: 0xffffff,
-        show_level: show_level.ONLY_NORMAL,
-        text: `${timeSensor.getSeconds()}s · ${_memLine()}`
-      });
+      }
+      secondTextWidget = createWidget(widget.TEXT, { ..._dbgOpts, show_level: show_level.ONLY_NORMAL, text: _dbgText('N') });
+      aodDebugWidget   = createWidget(widget.TEXT, { ..._dbgOpts, show_level: show_level.ONAL_AOD,    text: _dbgText('AOD') });
     };
 
     /* 1 - HEART EDITABLE GROUP */
@@ -495,7 +522,7 @@ WatchFace({
 
     createWidget(widget.WIDGET_DELEGATE, {
       resume_call: function () {
-        if ( DEBUG ) logger.log('resume_call');
+        if ( DEBUG ) { logger.log('resume_call: ' + _probeLine()); _dbgUpdate() }
 
         if (screenType == SCENE_AOD) {
           hourTextWidgetA.setProperty(prop.MORE, {text : '', x: HaX});
@@ -506,7 +533,6 @@ WatchFace({
           minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
         } else {
           _refreshColors()
-          if ( DEBUG ) { secondTextWidget.setProperty(prop.MORE, {text : `${timeSensor.getSeconds()}s · ${_memLine()}` }) }
           hourTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getHours(timeSensor.getHours())}`, x: HaX, color: hourColor });
           minuteTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}`, x: MaX, color: minuteColor });
           hourTextWidgetB.setProperty(prop.MORE, {text : '', x: HbX});
@@ -522,10 +548,11 @@ WatchFace({
     });
 
     if ( DEBUG ) {
+      logger.log('[aod] build: ' + _probeLine());
       logger.log('[mem] after build: ' + _memLine());
       logger.log('[mem] modules: ' + _memModules());
       setInterval(() => {
-        secondTextWidget.setProperty(prop.MORE, {text : `${timeSensor.getSeconds()}s · ${_memLine()}` });
+        if (secondTextWidget) secondTextWidget.setProperty(prop.MORE, { text: _dbgText('N') });
       }, 1000);
     };
 
@@ -538,7 +565,7 @@ WatchFace({
     timeSensor.onPerMinute(() => {
       let hour = timeSensor.getHours();
       let min = timeSensor.getMinutes();
-      if ( DEBUG ) logger.log('onPerMinute: ' + hour + ':' + min);
+      if ( DEBUG ) { logger.log('onPerMinute: ' + hour + ':' + min + ' · ' + _probeLine()); _dbgUpdate() }
 
       if (screenType == SCENE_AOD) {
         hourAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getHours(hour)}` });
