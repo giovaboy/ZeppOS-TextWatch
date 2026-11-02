@@ -5,8 +5,8 @@
     "appName": "TextWatch Italiano",
     "appType": "watchface",
     "version": {
-      "code": 3,
-      "name": "1.4.0"
+      "code": 4,
+      "name": "1.5.0"
     },
     "icon": "preview.png",
     "vender": "giova",
