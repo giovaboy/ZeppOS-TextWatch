@@ -506,14 +506,28 @@ export default class EditTypesUtil {
         const sunWeather = new Weather()
         const sunTime    = new Time()
 
+        // getForecast() returns the whole forecast (every day, weather and tide data) just to read
+        // today's sunrise and sunset: read it at most once per clock hour, keeping only those two times.
+        // The hour key also covers the change of day; a failed read leaves the key unset, so the next
+        // resume tries again. Dot and next-event text are recomputed from the cache on every resume.
+        let _sunCache = null
+        let _sunCacheKey = null
+
         function _getTideDay() {
+          const key = `${sunTime.getMonth()}-${sunTime.getDate()}-${sunTime.getHours()}`
+          if (key === _sunCacheKey) return _sunCache
           try {
             const td = sunWeather.getForecast().tideData
-            if (!td || !td.count) return null
+            if (!td || !td.count) return _sunCache
             const day = td.data[0] || {}
-            if (!day.sunrise || !day.sunset) return null
-            return day
-          } catch (e) { return null }
+            if (!day.sunrise || !day.sunset) return _sunCache
+            _sunCache = {
+              sunrise: { hour: day.sunrise.hour, minute: day.sunrise.minute },
+              sunset:  { hour: day.sunset.hour,  minute: day.sunset.minute },
+            }
+            _sunCacheKey = key
+          } catch (e) {}
+          return _sunCache
         }
 
         function _updateSun() {
