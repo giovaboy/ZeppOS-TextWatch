@@ -52,12 +52,12 @@ TEXTS = {
 _BARLOW = {
     'hour':   (os.path.join(FONTS, 'Barlow-Medium.ttf'), 64),
     'minute': (os.path.join(FONTS, 'Barlow-Regular.ttf'), 64),
-    'date':   (os.path.join(FONTS, 'Barlow-RegularDate.ttf'), 28),
+    'date':   (os.path.join(FONTS, 'Barlow-Regular.ttf'), 28),
 }
 _BARLOW_FR = {
     'hour':   (os.path.join(FONTS, 'Barlow-Medium.ttf'), 64),
     'minute': (os.path.join(FONTS, 'Barlow-Regular.ttf'), 60),
-    'date':   (os.path.join(FONTS, 'Barlow-RegularDate.ttf'), 28),
+    'date':   (os.path.join(FONTS, 'Barlow-Regular.ttf'), 28),
 }
 _INTER_RU = {
     'hour':   (os.path.join(FONTS, 'Inter-Medium.ttf'), 64),

@@ -138,8 +138,8 @@ const dummyCharsetDate = _isRu ? 'абвгдеиклмнопрстуфцчьюя
 const hourNormalFont = _isRu ? 'fonts/Inter-Medium.ttf' : 'fonts/Barlow-Medium.ttf';
 const minuteNormalFont = _isRu ? 'fonts/Inter-Regular.ttf' : 'fonts/Barlow-Regular.ttf';
 
-// Prova: un solo file per minuti e data (prima Barlow-RegularDate.ttf, copia identica di Barlow-Regular.ttf,
-// nata per aggirare un problema di rendering con lo stesso ttf a due dimensioni). Il russo usa già Inter-Regular per entrambi.
+// Data e minuti condividono lo stesso ttf (prima c'era una copia identica, Barlow-RegularDate.ttf, per un
+// problema di rendering con lo stesso file a due dimensioni, che nelle prove di novembre 2026 non si è presentato).
 const dateFont = _isRu ? 'fonts/Inter-Regular.ttf' : 'fonts/Barlow-Regular.ttf';
 
 const hourAODFont = _isRu ? 'fonts/Inter-Light.ttf' : 'fonts/Barlow-Light.ttf';
