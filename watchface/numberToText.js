@@ -165,7 +165,7 @@ export default class NumberToText {
       case 10: // Italian
         if (h === 0)             return IT_MAP.mezzanotte
         if (h === 12)            return IT_MAP.mezzogiorno
-        if (h === 1 || h === 13) return IT_MAP.una
+        if (h === 1)             return IT_MAP.una
         return IT_MAP[h]
       case 3:  // Spanish
         if (h === 0)             return 'medianoche'
