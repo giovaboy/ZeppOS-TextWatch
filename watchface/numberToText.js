@@ -177,7 +177,8 @@ export default class NumberToText {
       case 6:  // French
         if (h === 0)             return 'minuit'
         if (h === 12)            return 'midi'
-        if (h === 1 || h === 13) return 'une'
+        if (h === 1)             return 'une'
+        if (h === 13)            return FR_ONES[13]
         return FR_ONES[h12]
       default: // English
         if (h === 0)  return 'midnight'
