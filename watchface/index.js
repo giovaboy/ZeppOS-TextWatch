@@ -70,7 +70,10 @@ function _probeLine() {
   try { now = _sceneName(getScene()) } catch (_) {}
   return `load ${_dbgLoadAt} · build#${_dbgBuilds} ${_dbgBuildAt} ${_dbgBuildScene} · now ${now}`
 }
-const _dbgText = (tag) => `${tag} ${_probeLine()}\n${_memLine()} · upd ${_hms()}`
+// DEBUG: quante volte si è presentata la sovrapposizione tra scatto del minuto e risveglio (vedi _shownMinute)
+let _dbgTicksSkipped = 0
+let _dbgWakesInAnim = 0
+const _dbgText = (tag) => `${tag} ${_probeLine()}\n${_memLine()} · upd ${_hms()}\ntick skip ${_dbgTicksSkipped} · wake in anim ${_dbgWakesInAnim}`
 function _dbgUpdate() {
   if (secondTextWidget) secondTextWidget.setProperty(prop.MORE, { text: _dbgText('N') })
   if (aodDebugWidget)   aodDebugWidget.setProperty(prop.MORE, { text: _dbgText('AOD') })
@@ -213,9 +216,20 @@ function _updateAOD() {
   minuteAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
 }
 
-// DEBUG: due righe sopra le ore (scena/istanza e memoria), una per modalità, nello stesso posto.
+// Stato delle righe di ore e minuti in modalità normale. Lo scatto del minuto e il risveglio possono
+// arrivare vicini e in qualunque ordine, quindi nessuno dei due deve disfare il lavoro dell'altro:
+//  - scatto dopo il risveglio, stesso minuto: il testo è già giusto, niente animazione a vuoto;
+//  - risveglio durante l'animazione: la riga in uscita non viene rimessa a posto e quella in entrata
+//    non viene svuotata, altrimenti la riga resta vuota fino alla fine dell'animazione.
+let _shownHour = null;
+let _shownMinute = null;
+let _hourAnimPending = 0;   // animazioni (0-2) avviate e non ancora concluse
+let _minuteAnimPending = 0;
+let _settleTimer = null;
+
+// DEBUG: tre righe sopra le ore (scena/istanza, memoria, sovrapposizioni), una per modalità, nello stesso posto.
 const _dbgOpts = () => ({
-  x: px(80), y: px(64), w: px(320), h: px(40), text_size: px(13),
+  x: px(80), y: px(50), w: px(320), h: px(56), text_size: px(13),
   align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.WRAP,
   color: 0xffffff,
 })
@@ -344,7 +358,8 @@ WatchFace({
       x: HbX, y: HbY, w: HbW, h: HbH, text_size: hourTextSize, color: hourColor, show_level: show_level.ONLY_NORMAL, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS })
     _createHourAOD();
 
-    hourTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getHours(timeSensor.getHours())}` });
+    _shownHour = timeSensor.getHours();
+    hourTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getHours(_shownHour)}` });
     hourTextWidgetB.setProperty(prop.MORE, { text: '' });
 
     animIdHourA = hourTextWidgetA.setProperty(prop.ANIM, {
@@ -355,6 +370,7 @@ WatchFace({
       anim_repeat: 0,
       anim_complete_func: () => {
         if ( DEBUG ) logger.log('animation complete animIdHourA');
+        _hourAnimPending = Math.max(0, _hourAnimPending - 1);
         hourTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getHours(timeSensor.getHours())}`, x: HaX });
       }
     });
@@ -367,6 +383,7 @@ WatchFace({
       anim_repeat: 0,
       anim_complete_func: () => {
         if ( DEBUG ) logger.log('animation complete animIdHourB');
+        _hourAnimPending = Math.max(0, _hourAnimPending - 1);
         hourTextWidgetB.setProperty(prop.MORE, {text: '', x: HbX});
       }
     });
@@ -378,7 +395,8 @@ WatchFace({
       show_level: show_level.ONLY_NORMAL, x: MbX, y: MbY, w: MbW, h: MbH, color: minuteColor, text_size: minuteTextSize, align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.ELLIPSIS });
     _createMinuteAOD();
 
-    minuteTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
+    _shownMinute = timeSensor.getMinutes();
+    minuteTextWidgetA.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(_shownMinute)}` });
     minuteTextWidgetB.setProperty(prop.MORE, { text: '' });
 
     animIdMinuteA = minuteTextWidgetA.setProperty(prop.ANIM, {
@@ -389,6 +407,7 @@ WatchFace({
       anim_repeat: 0,
       anim_complete_func: () => {
         if ( DEBUG ) logger.log('animation complete animIdMinuteA');
+        _minuteAnimPending = Math.max(0, _minuteAnimPending - 1);
         minuteTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}`, x: MaX });
       }
     });
@@ -401,6 +420,7 @@ WatchFace({
       anim_repeat: 0,
       anim_complete_func: () => {
         if ( DEBUG ) logger.log('animation complete animIdMinuteB');
+        _minuteAnimPending = Math.max(0, _minuteAnimPending - 1);
         minuteTextWidgetB.setProperty(prop.MORE, {text: '', x: MbX });
       }
     });
@@ -576,9 +596,27 @@ WatchFace({
     })
 
 
+    // Porta una riga allo stato di riposo: testo attuale in A al suo posto, B vuoto e fuori schermo
+    function _settleHourRow() {
+      _hourAnimPending = 0;
+      _shownHour = timeSensor.getHours();
+      hourTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getHours(_shownHour)}`, x: HaX, color: hourColor });
+      hourTextWidgetB.setProperty(prop.MORE, {text : '', x: HbX});
+    }
+    function _settleMinuteRow() {
+      _minuteAnimPending = 0;
+      _shownMinute = timeSensor.getMinutes();
+      minuteTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(_shownMinute)}`, x: MaX, color: minuteColor });
+      minuteTextWidgetB.setProperty(prop.MORE, {text : '', x: MbX});
+    }
+
     createWidget(widget.WIDGET_DELEGATE, {
       resume_call: function () {
-        if ( DEBUG ) { logger.log('resume_call: ' + _probeLine()); _dbgUpdate() }
+        if ( DEBUG ) {
+          if (_hourAnimPending > 0 || _minuteAnimPending > 0) _dbgWakesInAnim++
+          logger.log('resume_call: anim pending h' + _hourAnimPending + ' m' + _minuteAnimPending + ' · ' + _probeLine());
+          _dbgUpdate()
+        }
 
         if (screenType == SCENE_AOD) {
           hourTextWidgetA.setProperty(prop.MORE, {text : '', x: HaX});
@@ -589,10 +627,28 @@ WatchFace({
           minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
         } else {
           _refreshColors()
-          hourTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getHours(timeSensor.getHours())}`, x: HaX, color: hourColor });
-          minuteTextWidgetA.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}`, x: MaX, color: minuteColor });
-          hourTextWidgetB.setProperty(prop.MORE, {text : '', x: HbX});
-          minuteTextWidgetB.setProperty(prop.MORE, {text : '', x: MbX});
+          // Riga ferma: si rimette a posto. Riga in animazione: si lascia finire, aggiornando solo il testo
+          // in entrata; A si sistema da sola alla fine dell'animazione.
+          if (_hourAnimPending > 0) {
+            _shownHour = timeSensor.getHours();
+            hourTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getHours(_shownHour)}` });
+          } else {
+            _settleHourRow();
+          }
+          if (_minuteAnimPending > 0) {
+            _shownMinute = timeSensor.getMinutes();
+            minuteTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(_shownMinute)}` });
+          } else {
+            _settleMinuteRow();
+          }
+          // Rete di sicurezza: se la fine di un'animazione non arrivasse, la riga non resta fuori posto
+          if (_hourAnimPending > 0 || _minuteAnimPending > 0) {
+            if (_settleTimer) clearTimeout(_settleTimer);
+            _settleTimer = setTimeout(() => {
+              if (_hourAnimPending > 0) _settleHourRow();
+              if (_minuteAnimPending > 0) _settleMinuteRow();
+            }, animDuration + 300);
+          }
           hourAODWidget.setProperty(prop.MORE, {text : ''});
           minuteAODWidget.setProperty(prop.MORE, {text : ''});
           updateDateWidget();
@@ -627,19 +683,28 @@ WatchFace({
         hourAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getHours(hour)}` });
         minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(min)}` });
       } else {
-        minuteTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(min)}`, x: MbX });
+        // Il risveglio può aver già mostrato questo minuto: animarlo farebbe uscire e rientrare lo stesso testo
+        if (DEBUG && min === _shownMinute && hour === _shownHour) { _dbgTicksSkipped++; _dbgUpdate() }
 
-        minuteTextWidgetA.setProperty(prop.ANIM_STATUS, {
-          anim_id: animIdMinuteA,
-          anim_status: anim_status.START
-        });
+        if (min !== _shownMinute) {
+          _shownMinute = min;
+          _minuteAnimPending = 2;
+          minuteTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(min)}`, x: MbX });
 
-        minuteTextWidgetB.setProperty(prop.ANIM_STATUS, {
-          anim_id: animIdMinuteB,
-          anim_status: anim_status.START
-        });
+          minuteTextWidgetA.setProperty(prop.ANIM_STATUS, {
+            anim_id: animIdMinuteA,
+            anim_status: anim_status.START
+          });
 
-        if (min == 0) {
+          minuteTextWidgetB.setProperty(prop.ANIM_STATUS, {
+            anim_id: animIdMinuteB,
+            anim_status: anim_status.START
+          });
+        }
+
+        if (hour !== _shownHour) {
+          _shownHour = hour;
+          _hourAnimPending = 2;
           hourTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getHours(hour)}`, x: HbX });
 
           hourTextWidgetA.setProperty(prop.ANIM_STATUS, {
@@ -651,7 +716,6 @@ WatchFace({
             anim_id: animIdHourB,
             anim_status: anim_status.START
           });
-
         }
       }
     })
@@ -676,6 +740,7 @@ WatchFace({
 
   onDestroy() {
     if ( DEBUG ) logger.log('onDestroy invoke');
+    if (_settleTimer) clearTimeout(_settleTimer);
     _del(dateTextWidget);
     _del(hourTextWidgetA);
     _del(hourTextWidgetB);
