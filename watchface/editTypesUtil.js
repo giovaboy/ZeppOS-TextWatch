@@ -35,7 +35,7 @@ function _makeReader(def) {
 }
 
 // ─── Path constants ───────────────────────────────────────────────────────────
-const numPath     = 'numbers_28/' // solo p.png è ancora usato (IMG_POINTER)
+const numPath     = 'numbers_28/' // only p.png is still used (IMG_POINTER)
 const iconBg      = 'iconbg/'
 const XicPath     = 'xicon/'
 const previewPath = 'preview/'
@@ -62,15 +62,15 @@ export const BLANK_TYPE = 0x186b0
 
 // ─── Widget definitions ───────────────────────────────────────────────────────
 // r:        renderer
-// dt:       data_type per TEXT_FONT / ARC_PROGRESS / IMG_POINTER / IMG_LEVEL
-// jumpType: data_type per IMG_CLICK (navigazione app di sistema)
-// icon:     stem per xicon/
-// bg:       stem per iconbg/
-// color:    colore arco (solo renderer 'arc')
-// unit:     true → unit_type:1 su TEXT_FONT (aggiunge simbolo unità)
-// padding:  true → padding su TEXT_FONT (solo alarm)
+// dt:       data_type for TEXT_FONT / ARC_PROGRESS / IMG_POINTER / IMG_LEVEL
+// jumpType: data_type for IMG_CLICK (opens the system app)
+// icon:     file stem in xicon/
+// bg:       file stem in iconbg/
+// color:    arc color ('arc' renderer only)
+// unit:     true → unit_type:1 on TEXT_FONT (adds the unit symbol)
+// padding:  true → padding on TEXT_FONT (alarm only)
 const WIDGET_DEFS = {
-  // ── arco + numero + icona ──────────────────────────────────────────────────
+  // ── arc + number + icon ────────────────────────────────────────────────────
   [edit_type.STEP]:               { r:'arc',      dt: data_type.STEP,               icon:'step',      bg:'step',      color:0x06a5ff, jumpType: data_type.STEP,               sysText:true },
   [edit_type.CAL]:                { r:'arc',      dt: data_type.CAL,                icon:'kcal',      bg:'cal',       color:0xdf4f26, jumpType: data_type.CAL,                sysText:true },
   [edit_type.PAI]:                { r:'arc',      dt: data_type.PAI_WEEKLY,         icon:'Pai',       bg:'pai',       color:0xd612c0, jumpType: data_type.PAI_WEEKLY,         sysText:true },
@@ -79,7 +79,7 @@ const WIDGET_DEFS = {
   [edit_type.STAND]:              { r:'arc',      dt: data_type.STAND,              icon:'stand',     bg:'step',      color:0x06a5ff, jumpType: data_type.STAND,              sysText:true },
   [edit_type.RECOVERY_TIME]:      { r:'arc',      dt: data_type.RECOVERY_TIME,      icon:'recovery',  bg:'recovery',  color:0x06a5ff, jumpType: data_type.RECOVERY_TIME,      sysText:true },
   [edit_type.VO2MAX]:             { r:'pointer',  dt: data_type.VO2MAX,             icon:'vo2',       bg:'vo2',                       jumpType: data_type.VO2MAX,             invalid:true },
-  // ── sfondo + numero + icona ───────────────────────────────────────────────
+  // ── background + number + icon ────────────────────────────────────────────
   [edit_type.DISTANCE]:           { r:'numeric',  dt: data_type.DISTANCE,           icon:'dis',       bg:'dis',                       jumpType: data_type.DISTANCE,           sysText:true },
   [edit_type.SLEEP]:              { r:'numeric',  dt: data_type.SLEEP,              icon:'sleep',     bg:'sleep',                     jumpType: data_type.SLEEP,              dot:'point', invalid:true },
   [edit_type.STRESS]:             { r:'numeric',  dt: data_type.STRESS,             icon:'pressure',  bg:'kpa',                       jumpType: data_type.STRESS,             sysText:true },
@@ -91,21 +91,21 @@ const WIDGET_DEFS = {
   [edit_type.ALARM_CLOCK]:        { r:'numeric',  dt: data_type.ALARM_CLOCK,        icon:'alarm',     bg:'dis',                       jumpType: data_type.ALARM_CLOCK,        sysText:true, padding:true },
   [edit_type.COUNT_DOWN]:         { r:'numeric',  dt: data_type.COUNT_DOWN,         icon:'stopwatch', bg:'dis',                       jumpType: data_type.COUNT_DOWN,         sysText:true },
   [edit_type.TRAINING_LOAD]:      { r:'numeric',  dt: data_type.TRAINING_LOAD,      icon:'recovery',  bg:'recovery',                  jumpType: data_type.TRAINING_LOAD,      sysText:true },
-  // ── puntatore rotante ─────────────────────────────────────────────────────
+  // ── rotating pointer ──────────────────────────────────────────────────────
   [edit_type.SPO2]:               { r:'pointer',  dt: data_type.SPO2,               icon:'spo2',      bg:'spo2',                      jumpType: data_type.SPO2,               unit:'percent', invalid:true },
   [edit_type.WIND]:               { r:'wind',                                        icon:'wind',      bg:'wind',                      jumpType: data_type.WIND,               invalid:true },
   [edit_type.TEMPERATURE]:        { r:'pointerT', dt: data_type.WEATHER_CURRENT,    icon:'T',         bg:'t',                         jumpType: data_type.BODY_TEMP,          bodyTemp:true },
-  // ── speciali ──────────────────────────────────────────────────────────────
+  // ── special ───────────────────────────────────────────────────────────────
   [edit_type.HEART]:              { r:'heart',    dt: data_type.HEART,              icon:'heart',                                     jumpType: data_type.HEART,              sysText:true },
   [edit_type.UVI]:                { r:'uvi',      dt: data_type.UVI,                icon:'UVI',                                       jumpType: data_type.UVI,                invalid:true },
   [edit_type.MOON]:               { r:'moon',     dt: data_type.MOON,                                                                 jumpType: data_type.MOON_CURRENT },
   [edit_type.WEATHER]:            { r:'weather',  dt: data_type.WEATHER_CURRENT,                      bg:'weather',                   jumpType: data_type.WEATHER,            unit:'degree', neg:true, invalid:'w' },
-  // ── nuovi ─────────────────────────────────────────────────────────────────
+  // ── newer ones ────────────────────────────────────────────────────────────
   [edit_type.PAI_WEEKLY]:         { r:'paiWeekly',                                                                                    jumpType: data_type.PAI_WEEKLY },
   [edit_type.SUN]:                { r:'sun',                                                                                          jumpType: data_type.SUN_CURRENT },
 }
 
-// ─── Optional widget list (menu di modifica) ──────────────────────────────────
+// ─── Optional widget list (edit menu) ─────────────────────────────────────────
 export const widgetOptionalArray = [
   { type: BLANK_TYPE,           preview: 'bg/color/prev_blank.png',     title_en: 'Empty',     title_sc: 'Vuoto',      title_tc: 'Vuoto'      },
   { type: edit_type.BIO_CHARGE,    preview: previewPath + 'bio_charge.png',     title_en: 'BioCharge',    title_sc: 'BioCarica',  title_tc: 'BioCarica'  },
@@ -148,7 +148,7 @@ export default class EditTypesUtil {
     const def = WIDGET_DEFS[editType]
     if (!def) return
 
-    // Geometria slot
+    // Slot geometry
     const sx  = px(slotBaseX)
     const sy  = px(slotBaseY)
     const bgx = sx + px(4)
@@ -165,7 +165,7 @@ export default class EditTypesUtil {
     const iconPath = def.icon ? XicPath + def.icon + '.png' : null
     const bgImg    = def.bg   ? iconBg  + def.bg  + '.png' : null
 
-    // Navigazione nativa via IMG_CLICK — creato sempre per ultimo (z-order sopra tutto)
+    // Native navigation through IMG_CLICK — always created last (z-order above everything)
     function addJump() {
       createWidget(widget.IMG_CLICK, {
         x: bgx, y: bgy, w: bgw, h: bgw,
@@ -181,7 +181,7 @@ export default class EditTypesUtil {
       })
     }
 
-    // Numero (TEXT) + icona — renderer manuali (pointerT, sleep)
+    // Number (TEXT) + icon — manual renderers (pointerT, sleep)
     function drawIconText(getValue) {
       const tw = createWidget(widget.TEXT, {
         x: numX, y: numY, w: bgw, h: numH,
@@ -412,14 +412,14 @@ export default class EditTypesUtil {
           show_level: show_level.ONLY_NORMAL,
         })
 
-        // barre di sfondo
+        // background bars
         barXCoords.forEach(bx => createWidget(widget.FILL_RECT, {
           x: bx, y: barBaseY, w: BAR_W, h: BAR_H,
           radius: Math.round(BAR_W / 2), color: 0x4a1048,
           show_level: show_level.ONLY_NORMAL,
         }))
 
-        // barre attive — inizializzate vuote, aggiornate subito e al resume
+        // active bars — start empty, updated right away and on resume
         const paiSensor = _sen('pai', Pai)
 
         const barWidgets = barXCoords.map(bx => createWidget(widget.FILL_RECT, {
@@ -428,7 +428,7 @@ export default class EditTypesUtil {
           show_level: show_level.ONLY_NORMAL,
         }))
 
-        // testo totale PAI — creato dopo le barre per stare sopra (z-order)
+        // PAI total text — created after the bars to stay on top (z-order)
         const paiTextW = createWidget(widget.TEXT, {
           x: sx, y: sy + px(4), w: bgw, h: px(30),
           text: '--', text_size: px(26), color: _wTC,

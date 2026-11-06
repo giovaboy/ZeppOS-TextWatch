@@ -32,10 +32,10 @@ TEXTS = {
     'it': {'hour': 'undici',       'minute': 'e venti',    'date': 'lunedì 01 gennaio'},
     'en': {'hour': 'eleven',       'minute': 'and twenty', 'date': 'monday 01 january'},
     'es': {'hour': 'once',         'minute': 'y veinte',   'date': 'lunes, 01 de enero'},
-    # hour usa "10" invece di "11": "одиннадцать" (11) è un outlier di lunghezza
-    # tra le ore russe e sfora il riquadro 400px anche coi soli 64px reali.
-    # date usa il giorno/mese russi più corti (среда/мая) — a 28px reali,
-    # "понедельник, 1 января" tronca «п» e «я» nel riquadro 280px
+    # hour uses "10" instead of "11": "одиннадцать" (11) is a length outlier among
+    # the Russian hours and overflows the 400px box even at the real 64px.
+    # date uses the shortest Russian day/month (среда/мая) — at the real 28px,
+    # "понедельник, 1 января" cuts off «п» and «я» in the 280px box
     'ru': {'hour': 'десять',  'minute': 'и двадцать', 'date': 'среда, 5 мая'},
     'fr': {'hour': 'onze',         'minute': 'et vingt',   'date': 'lundi 1 janvier'},
 }

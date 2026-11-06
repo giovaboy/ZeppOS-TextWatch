@@ -36,8 +36,8 @@ const IT_MONTHS = {
   5: 'maggio',   6: 'giugno',   7: 'luglio',   8: 'agosto',
   9: 'settembre',10: 'ottobre', 11: 'novembre',12: 'dicembre',
 }
-// Elisioni fonetiche: x1 "trentuno", x8 "ventotto", tutti < 26 diretti.
-// I composti in -tre vogliono l'accento: "trentatré", "cinquantatré" ("tre" da solo no).
+// Phonetic elisions: x1 "trentuno", x8 "ventotto"; everything below 26 is looked up directly.
+// Compounds in -tre take an accent: "trentatré", "cinquantatré" ("tre" alone doesn't).
 function _itNumToWords(n) {
   const mod = n % 10
   if (n < 26 || mod === 1 || mod === 8) return IT_MAP[n]
@@ -72,7 +72,7 @@ function _enNumToWords(n) {
 
 // ─── Spanish data ─────────────────────────────────────────────────────────────
 
-// 16-29 sono forme composte in una parola sola; 30+ usano "y"
+// 16-29 are compounds written as one word; 30+ use "y"
 const ES_MAP = {
   1:  'uno',   2:  'dos',    3:  'tres',      4:  'cuatro',   5:  'cinco',
   6:  'seis',  7:  'siete',  8:  'ocho',      9:  'nueve',    10: 'diez',
@@ -116,7 +116,7 @@ const FR_MONTHS = {
   5: 'mai',      6: 'juin',     7: 'juillet',   8: 'août',
   9: 'septembre',10: 'octobre', 11: 'novembre', 12: 'décembre',
 }
-// x1 non si lega con il trattino ("vingt et un", non "vingt-un")
+// x1 doesn't join with a hyphen ("vingt et un", not "vingt-un")
 function _frNumToWords(n) {
   if (n < 20) return FR_ONES[n]
   const tens = FR_TENS[Math.floor(n / 10)]
@@ -142,7 +142,7 @@ const RU_DAYS = {
   1: 'понедельник', 2: 'вторник',  3: 'среда',    4: 'четверг',
   5: 'пятница',     6: 'суббота',  7: 'воскресенье',
 }
-// Mesi in caso genitivo (usato nelle date: "19 мая")
+// Months in the genitive case (used in dates: "19 мая")
 const RU_MONTHS = {
   1: 'января',   2: 'февраля',  3: 'марта',     4: 'апреля',
   5: 'мая',      6: 'июня',     7: 'июля',       8: 'августа',
@@ -155,7 +155,7 @@ function _ruNumToWords(n) {
   return ones ? tens + ' ' + ones : tens
 }
 
-// ─── API pubblica ─────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export default class NumberToText {
 

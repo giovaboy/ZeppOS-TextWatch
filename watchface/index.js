@@ -29,9 +29,9 @@ const logger = log.getLogger("textwatch");
 
 const timeSensor = new Time()
 
-// DEBUG: memoria dell'app e del sistema, da getPerformance (API 4.0; il progetto punta a 3.0, quindi
-// su firmware più vecchi la funzione può mancare). Una watch face non ha side service né Logs box:
-// la riga va a schermo (secondTextWidget) e nel log del simulatore.
+// DEBUG: app and system memory from getPerformance (API 4.0; the project targets 3.0, so it can be
+// missing on older firmware). A watch face has no side service and no Logs box, so the line goes
+// on screen (secondTextWidget) and to the simulator log.
 const APP_ID = 1043121
 function _memLine() {
   try {
@@ -54,11 +54,11 @@ function _memModules() {
   } catch (_) { return '' }
 }
 
-// DEBUG: prova AOD. Domanda: in AOD gira un'istanza JS separata della watch face (con un suo build),
-// o è la stessa istanza della modalità normale? Ogni istanza ha un suo "load" (ora di caricamento del
-// modulo) e conta i propri build; la scena è letta sia al build sia al momento dell'aggiornamento.
-//   istanza separata → la riga AOD dice "build aod · now aod" e un load diverso da quello della normale
-//   stessa istanza   → la riga AOD dice "build wf · now aod" e lo stesso load della normale
+// DEBUG: AOD probe. Question: does AOD run a separate JS instance of the watch face (with its own build),
+// or the same instance as normal mode? Each instance has its own "load" (the time the module was
+// loaded) and counts its own builds; the scene is read both at build and at each update.
+//   separate instance → the AOD line says "build aod · now aod", with a different load from the normal one
+//   same instance     → the AOD line says "build wf · now aod", with the same load as the normal one
 const _hms = () => [timeSensor.getHours(), timeSensor.getMinutes(), timeSensor.getSeconds()].map(n => String(n).padStart(2, '0')).join(':')
 const _sceneName = (s) => s === SCENE_AOD ? 'aod' : s === SCENE_WATCHFACE ? 'wf' : s === SCENE_SETTINGS ? 'edit' : String(s)
 const _dbgLoadAt = _hms()
@@ -70,7 +70,7 @@ function _probeLine() {
   try { now = _sceneName(getScene()) } catch (_) {}
   return `load ${_dbgLoadAt} · build#${_dbgBuilds} ${_dbgBuildAt} ${_dbgBuildScene} · now ${now}`
 }
-// DEBUG: quante volte si è presentata la sovrapposizione tra scatto del minuto e risveglio (vedi _shownMinute)
+// DEBUG: how many times the minute tick and the wake overlapped (see _shownMinute)
 let _dbgTicksSkipped = 0
 let _dbgWakesInAnim = 0
 const _dbgText = (tag) => `${tag} ${_probeLine()}\n${_memLine()} · upd ${_hms()}\ntick skip ${_dbgTicksSkipped} · wake in anim ${_dbgWakesInAnim}`
@@ -79,19 +79,19 @@ function _dbgUpdate() {
   if (aodDebugWidget)   aodDebugWidget.setProperty(prop.MORE, { text: _dbgText('AOD') })
 }
 
-// Barlow non copre il cirillico: per il russo (lang 4) si usa Inter (subset latino+cirillico)
+// Barlow has no Cyrillic: Russian (lang 4) uses Inter (Latin + Cyrillic subset)
 const _isRu = (() => { try { return getLanguage() === 4 } catch (_) { return false } })()
 const _isFr = (() => { try { return getLanguage() === 6 } catch (_) { return false } })()
 
 const dateTextSize = px(28);
-// In russo la stringa peggiore ("и пятьдесят восемь") a 64px sfora il widget; a 56px il margine è minimo (~6px)
-// In francese "et cinquante-quatre" sfora leggermente a 64px; 60px lascia ~18px di margine
+// Russian: the worst string ("и пятьдесят восемь") overflows the widget at 64px; at 56px the margin is tiny (~6px)
+// French: "et cinquante-quatre" slightly overflows at 64px; 60px leaves a margin of ~18px
 const minuteTextSize = _isRu ? px(56) : _isFr ? px(60) : px(64);
 const hourTextSize = px(64);
 
 const HaH = (hourTextSize * 1.25);
 const HbH = HaH;
-const MaH = HaH; // box fisso: il testo ru più piccolo resta centrato dove si aspettano overlay e layout
+const MaH = HaH; // fixed box: the smaller ru text stays centred where the overlays and layout expect it
 const MbH = MaH;
 
 //balance = 480*480
@@ -141,8 +141,8 @@ const dummyCharsetDate = _isRu ? 'абвгдеиклмнопрстуфцчьюя
 const hourNormalFont = _isRu ? 'fonts/Inter-Medium.ttf' : 'fonts/Barlow-Medium.ttf';
 const minuteNormalFont = _isRu ? 'fonts/Inter-Regular.ttf' : 'fonts/Barlow-Regular.ttf';
 
-// Data e minuti condividono lo stesso ttf (prima c'era una copia identica, Barlow-RegularDate.ttf, per un
-// problema di rendering con lo stesso file a due dimensioni, che nelle prove di novembre 2026 non si è presentato).
+// Date and minutes share one TTF (there used to be an identical copy, Barlow-RegularDate.ttf, to work around
+// a rendering problem with one file at two sizes, which did not show up in testing in November 2026).
 const dateFont = _isRu ? 'fonts/Inter-Regular.ttf' : 'fonts/Barlow-Regular.ttf';
 
 const hourAODFont = _isRu ? 'fonts/Inter-Light.ttf' : 'fonts/Barlow-Light.ttf';
@@ -193,7 +193,7 @@ let colorGroupDate   = null;
 
 let editBgWidget = null;
 
-// ── Widget AOD (usati dal build AOD e, come riserva, da quello normale) ─────────
+// ── AOD widgets (used by the AOD build and, as a fallback, by the normal one) ───
 function _createAODBackground() {
   createWidget(widget.FILL_RECT, {
     x: px(0), y: px(0),
@@ -216,35 +216,35 @@ function _updateAOD() {
   minuteAODWidget.setProperty(prop.MORE, { text: `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
 }
 
-// Stato delle righe di ore e minuti in modalità normale. Lo scatto del minuto e il risveglio possono
-// arrivare vicini e in qualunque ordine, quindi nessuno dei due deve disfare il lavoro dell'altro:
-//  - scatto dopo il risveglio, stesso minuto: il testo è già giusto, niente animazione a vuoto;
-//  - risveglio durante l'animazione: la riga in uscita non viene rimessa a posto e quella in entrata
-//    non viene svuotata, altrimenti la riga resta vuota fino alla fine dell'animazione.
+// State of the hour and minute rows in normal mode. The minute tick and the wake can arrive close
+// together and in either order, so neither may undo the other's work:
+//  - tick after the wake, same minute: the text is already right, so no empty animation;
+//  - wake during the animation: the outgoing text isn't put back and the incoming one isn't
+//    cleared, or the row stays blank until the animation ends.
 let _shownHour = null;
 let _shownMinute = null;
-let _hourAnimPending = 0;   // animazioni (0-2) avviate e non ancora concluse
+let _hourAnimPending = 0;   // animations (0-2) started and not finished yet
 let _minuteAnimPending = 0;
 let _settleTimer = null;
 
-// DEBUG: tre righe sopra le ore (scena/istanza, memoria, sovrapposizioni), una per modalità, nello stesso posto.
+// DEBUG: three lines above the hours (scene/instance, memory, overlaps), one block per mode, in the same place.
 const _dbgOpts = () => ({
   x: px(80), y: px(50), w: px(320), h: px(56), text_size: px(13),
   align_h: align.CENTER_H, align_v: align.CENTER_V, text_style: text_style.WRAP,
   color: 0xffffff,
 })
 
-// deleteWidget solo sui widget creati: l'istanza AOD non crea quelli della modalità normale
+// deleteWidget only on widgets that exist: the AOD instance doesn't create the normal-mode ones
 function _del(w) { if (w) deleteWidget(w) }
 
 
 WatchFace({
 
-  // In AOD il sistema avvia un'istanza separata della watch face, con un suo build (verificato sul
-  // Cheetah 2 Ultra con la prova DEBUG, 02/11/2026: load e build propri, scena aod; l'istanza normale
-  // intanto resta viva e non viene ricreata al risveglio). Costava ~200 KB a ogni ingresso in AOD
-  // costruire anche sfondo modificabile, selettori colore, gruppi e widget degli slot, che in AOD non
-  // si vedono: qui si crea solo ciò che l'AOD mostra.
+  // In AOD the system starts a separate instance of the watch face, with its own build (checked on the
+  // Cheetah 2 Ultra with the DEBUG probe, 2026-11-02: own load and build, scene aod; the normal instance
+  // stays alive meanwhile and is not rebuilt on wake). Every entry into AOD cost ~200 KB to also build
+  // the editable background, color pickers, groups and slot widgets, none of them visible in AOD:
+  // this creates only what AOD shows.
   aodBuild() {
     _createAODBackground();
     _createHourAOD();
@@ -283,8 +283,8 @@ WatchFace({
       return;
     }
 
-    // Da qui la modalità normale (e l'editor). I widget AOD restano anche qui come riserva, nel caso
-    // un firmware mostri l'AOD con questa stessa istanza: costano poco (un rettangolo e due testi).
+    // From here on, normal mode (and the editor). The AOD widgets stay here too as a fallback, should
+    // a firmware show AOD from this same instance: they cost little (one rectangle and two texts).
     _createAODBackground();
 
     editBgWidget = createWidget(widget.WATCHFACE_EDIT_BG, {
@@ -321,16 +321,16 @@ WatchFace({
       return { grp }
     }
 
-    // Liste preview nella lingua del dispositivo (it/en/es/ru/fr, le altre ricadono sull'inglese).
-    // Costruite qui e passate direttamente a createWidget: nessun riferimento resta dopo il build,
-    // così il GC le libera (prima tutte le 15 liste restavano in memoria come export del modulo).
+    // Preview lists in the device language (it/en/es/ru/fr, the others fall back to English).
+    // Built here and passed straight to createWidget: no reference remains after the build, so the
+    // GC frees them (all 15 lists used to stay in memory as module exports).
     const _deviceLang = (() => { try { return getLanguage() } catch(_) { return 2 } })()
 
-    // Ore: rettangolo 400×80, centrato orizzontalmente, sovrapposto al testo ore (y=110, h=80)
+    // Hours: 400×80 rectangle, centred horizontally, over the hour text (y=110, h=80)
     const csHour   = _makeColorGroup(COLOR_EDIT_ID.HOUR,   px(40),  px(110), px(400), px(80),  colorOptionalArray('hour',   _deviceLang), 'mask/select_rect.png')
-    // Minuti: rettangolo 400×80, centrato, sovrapposto al testo minuti
+    // Minutes: 400×80 rectangle, centred, over the minute text
     const csMinute = _makeColorGroup(COLOR_EDIT_ID.MINUTE, px(40),  MaY,     px(400), px(80),  colorOptionalArray('minute', _deviceLang), 'mask/select_rect.png', true)
-    // Data: rettangolo 280×35, centrato (x=100), sovrapposto al testo data
+    // Date: 280×35 rectangle, centred (x=100), over the date text
     const csDate   = _makeColorGroup(COLOR_EDIT_ID.DATE,   px(100), dateY,   px(280), dateH,   colorOptionalArray('date',   _deviceLang), 'mask/select_date.png', true)
 
     colorGroupHour   = csHour.grp
@@ -433,7 +433,7 @@ WatchFace({
 
     updateDateWidget();
 
-    // area click: solo il testo data estesa al bordo
+    // tap area: only the date text, extended down to the edge
     createWidget(widget.FILL_RECT, {
       x: dateX, y: dateY, w: dateW, h: px(480) - dateY,
       color: 0x000000, alpha: 0,
@@ -596,7 +596,7 @@ WatchFace({
     })
 
 
-    // Porta una riga allo stato di riposo: testo attuale in A al suo posto, B vuoto e fuori schermo
+    // Brings a row to rest: current text in A, in place; B empty and off screen
     function _settleHourRow() {
       _hourAnimPending = 0;
       _shownHour = timeSensor.getHours();
@@ -627,8 +627,8 @@ WatchFace({
           minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(timeSensor.getMinutes())}` });
         } else {
           _refreshColors()
-          // Riga ferma: si rimette a posto. Riga in animazione: si lascia finire, aggiornando solo il testo
-          // in entrata; A si sistema da sola alla fine dell'animazione.
+          // Row at rest: put it in place. Row animating: let it finish, updating only the incoming text;
+          // A settles by itself when its animation ends.
           if (_hourAnimPending > 0) {
             _shownHour = timeSensor.getHours();
             hourTextWidgetB.setProperty(prop.MORE, {text : `${NumberToText.getHours(_shownHour)}` });
@@ -641,7 +641,7 @@ WatchFace({
           } else {
             _settleMinuteRow();
           }
-          // Rete di sicurezza: se la fine di un'animazione non arrivasse, la riga non resta fuori posto
+          // Safety net: if an animation's end never arrives, the row doesn't stay out of place
           if (_hourAnimPending > 0 || _minuteAnimPending > 0) {
             if (_settleTimer) clearTimeout(_settleTimer);
             _settleTimer = setTimeout(() => {
@@ -683,7 +683,7 @@ WatchFace({
         hourAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getHours(hour)}` });
         minuteAODWidget.setProperty(prop.MORE, {text : `${NumberToText.getMinutes(min)}` });
       } else {
-        // Il risveglio può aver già mostrato questo minuto: animarlo farebbe uscire e rientrare lo stesso testo
+        // The wake may already have shown this minute: animating it would slide the same text out and back in
         if (DEBUG && min === _shownMinute && hour === _shownHour) { _dbgTicksSkipped++; _dbgUpdate() }
 
         if (min !== _shownMinute) {
