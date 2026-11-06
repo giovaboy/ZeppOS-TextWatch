@@ -178,8 +178,8 @@ export default class NumberToText {
         if (h === 0)             return 'minuit'
         if (h === 12)            return 'midi'
         if (h === 1)             return 'une'
-        if (h === 13)            return FR_ONES[13]
-        return FR_ONES[h12]
+        if (h === 21)            return 'vingt et une' // feminine, like "une": "heure" is feminine
+        return _frNumToWords(h)
       default: // English
         if (h === 0)  return 'midnight'
         if (h === 12) return 'noon'
